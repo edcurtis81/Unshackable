@@ -172,3 +172,41 @@ function scheduleReminders() {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
 }
+// --------------------
+// Daily Reminder Logic
+// --------------------
+
+const notifyBtn = document.getElementById("notify");
+const reminderPanel = document.getElementById("reminderPanel");
+const permBtn = document.getElementById("permBtn");
+const saveBtn = document.getElementById("saveRemindersBtn");
+const statusEl = document.getElementById("reminderStatus");
+
+const t1 = document.getElementById("t1");
+const t2 = document.getElementById("t2");
+const t3 = document.getElementById("t3");
+
+notifyBtn?.addEventListener("click", () => {
+  reminderPanel.style.display =
+    reminderPanel.style.display === "none" ? "block" : "none";
+});
+
+permBtn?.addEventListener("click", async () => {
+  const result = await Notification.requestPermission();
+  statusEl.textContent =
+    result === "granted"
+      ? "Notifications enabled ✓"
+      : "Notifications blocked";
+});
+
+saveBtn?.addEventListener("click", () => {
+  if (Notification.permission !== "granted") {
+    statusEl.textContent = "Enable notifications first";
+    return;
+  }
+
+  const times = [t1.value, t2.value, t3.value];
+  localStorage.setItem("unshakable_reminder_times", JSON.stringify(times));
+
+  statusEl.textContent = "Saved ✓ (notifications fire when app is opened)";
+});
