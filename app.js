@@ -135,7 +135,7 @@ document.getElementById("edit").addEventListener("click", () => {
   const out = prompt("Edit your phrases (one per line). Keep it in your voice:", joined);
   if (out === null) return;
   const arr = out.split("\n").map(s => s.trim()).filter(Boolean);
-  savePhrases(arr.length ? arr : defaultPhrases.slice());
+  savePhrases(arr.length ? arr : DEFAULT_PHRASES.slice());
   phrases = loadPhrases();
   updateCount(phrases.length);
   setQuote(phrases[pickIndex(phrases.length)]);
