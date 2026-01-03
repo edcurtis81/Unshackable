@@ -72,7 +72,8 @@ const sublines = [
 const LS_KEYS = {
   phrases: "unshakable_phrases",
   lastIndex: "unshakable_last_index",
-  reminderTime: "unshakable_reminder_time"
+  reminderTime: "unshakable_reminder_time",
+  reminderTimes: "unshakable_reminder_times"
 };
 
 function loadPhrases() {
