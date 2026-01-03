@@ -145,7 +145,64 @@ document.getElementById("edit").addEventListener("click", () => {
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
 }
+// ----------------------------
+// Notifications helper block
+// ----------------------------
 
+const REMINDER_KEY = "unshakable_reminder_times";
+
+async function requestNotifyPermission() {
+  if (!("Notification" in window)) {
+    alert("Notifications are not supported on this device.");
+    return false;
+  }
+
+  if (Notification.permission === "granted") return true;
+
+  const result = await Notification.requestPermission();
+  return result === "granted";
+}
+
+function saveReminderTimes(times) {
+  localStorage.setItem(REMINDER_KEY, JSON.stringify(times));
+}
+
+function loadReminderTimes() {
+  try {
+    return JSON.parse(localStorage.getItem(REMINDER_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function scheduleReminders() {
+  if (Notification.permission !== "granted") return;
+
+  const times = loadReminderTimes();
+  if (!times.length) return;
+
+  times.forEach(time => {
+    const [h, m] = time.split(":").map(Number);
+    const now = new Date();
+    const target = new Date();
+
+    target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+
+    const delay = target - now;
+
+    setTimeout(() => {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.showNotification("Unshakable", {
+          body: "Open your app for a steady reset.",
+          icon: "icons/icon-192.png",
+          badge: "icons/icon-192.png",
+          data: { url: "./" }
+        });
+      });
+    }, delay);
+  });
+}
 const reminderBox = document.getElementById("reminder");
 document.getElementById("notify").addEventListener("click", async () => {
   reminderBox.style.display = reminderBox.style.display === "none" ? "block" : "none";
