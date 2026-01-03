@@ -80,7 +80,7 @@ function loadPhrases() {
   if (!raw) return DEFAULT_PHRASES.slice();
   try {
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) && arr.length ? arr : defaultPhrases.slice();
+    return Array.isArray(arr) && arr.length ? arr : DEFAULT_PHRASES.slice();
   } catch {
     return DEFAULT_PHRASES.slice();
   }
