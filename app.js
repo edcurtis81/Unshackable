@@ -77,12 +77,12 @@ const LS_KEYS = {
 
 function loadPhrases() {
   const raw = localStorage.getItem(LS_KEYS.phrases);
-  if (!raw) return defaultPhrases.slice();
+  if (!raw) return DEFAULT_PHRASES.slice();
   try {
     const arr = JSON.parse(raw);
     return Array.isArray(arr) && arr.length ? arr : defaultPhrases.slice();
   } catch {
-    return defaultPhrases.slice();
+    return DEFAULT_PHRASES.slice();
   }
 }
 
