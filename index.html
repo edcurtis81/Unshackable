@@ -116,7 +116,25 @@
 
     <div class="actions">
       <button id="next">New boost</button>
-      
+          <!-- Reminder panel (hidden until Daily reminder is tapped) -->
+    <div id="reminderPanel" class="reminder" hidden>
+      <div class="reminderTop">
+        <button id="permBtn">Enable notifications</button>
+        <button id="saveRemindersBtn">Save 3 times</button>
+        <span id="reminderStatus" class="reminderStatus"></span>
+      </div>
+
+      <div class="reminderTimes">
+        <label>Time 1 <input id="t1" type="time" value="08:30"></label>
+        <label>Time 2 <input id="t2" type="time" value="13:00"></label>
+        <label>Time 3 <input id="t3" type="time" value="20:30"></label>
+      </div>
+
+      <div class="reminderNote">
+        *Reminders fire when the app/page is open. (Browsers won’t reliably “alarm” in the background without push.)
+      </div>
+    </div>
+
       
       <button id="notify">Daily reminder</button>
     </div>
