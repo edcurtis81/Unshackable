@@ -246,6 +246,15 @@ document.getElementById("edit")?.addEventListener("click", () => {
   updateCount(phrases.length);
   setQuote(phrases[pickIndex(phrases.length)]);
 });
+const notifyBtn = document.getElementById("notify");
+const reminderPanel = document.getElementById("reminderPanel");
+
+if (notifyBtn && reminderPanel) {
+  notifyBtn.onclick = () => {
+    reminderPanel.style.display =
+      reminderPanel.style.display === "block" ? "none" : "block";
+  };
+}
 
 // ---------- reminders (ONE version only) ----------
 const notifyBtn = document.getElementById("notify");
