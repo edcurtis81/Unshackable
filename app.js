@@ -243,7 +243,83 @@ function initHoldTheLineUI() {
   render();
 }
 
-// ---------- daily reminder (UI toggle + save times) ----------
+// ---------------- reminders (simple + reliable) ----------------
+const LS_REMINDER_TIMES = "unshakable_reminder_times";
+const LS_REMINDER_FIRED = "unshakable_reminder_fired"; // per day
+
+function loadReminderTimes() {
+  try {
+    const raw = localStorage.getItem(LS_REMINDER_TIMES);
+    const times = raw ? JSON.parse(raw) : ["08:30", "13:00", "20:30"];
+    return Array.isArray(times) ? times : ["08:30", "13:00", "20:30"];
+  } catch {
+    return ["08:30", "13:00", "20:30"];
+  }
+}
+
+function saveReminderTimes(times) {
+  localStorage.setItem(LS_REMINDER_TIMES, JSON.stringify(times));
+}
+
+function todayKey() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getFiredMap() {
+  try {
+    const raw = localStorage.getItem(LS_REMINDER_FIRED);
+    const obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === "object") ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function setFired(timeStr) {
+  const map = getFiredMap();
+  const key = todayKey();
+  map[key] = map[key] || {};
+  map[key][timeStr] = true;
+  localStorage.setItem(LS_REMINDER_FIRED, JSON.stringify(map));
+}
+
+function alreadyFired(timeStr) {
+  const map = getFiredMap();
+  const key = todayKey();
+  return !!(map[key] && map[key][timeStr]);
+}
+
+function showReminderNotification() {
+  if (!("Notification" in window)) return;
+
+  if (Notification.permission === "granted") {
+    new Notification("Unshakable", {
+      body: "Hold your line. One clean decision.",
+      icon: "icon-192.png",
+    });
+  }
+}
+
+function startReminderLoop() {
+  // Check every 20 seconds while page is open
+  setInterval(() => {
+    const times = loadReminderTimes();
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const current = `${hh}:${mm}`;
+
+    if (times.includes(current) && !alreadyFired(current)) {
+      showReminderNotification();
+      setFired(current);
+    }
+  }, 20000);
+}
+
 function initReminderUI() {
   const notifyBtn = document.getElementById("notify");
   const panel = document.getElementById("reminderPanel");
@@ -255,14 +331,19 @@ function initReminderUI() {
   const t2 = document.getElementById("t2");
   const t3 = document.getElementById("t3");
 
-  // If you removed the reminder panel from HTML, do nothing.
   if (!notifyBtn || !panel) return;
 
-  // start hidden (safe)
-  if (!panel.style.display) panel.style.display = "none";
+  // Force panel hidden by default (cannot be overridden by CSS)
+  panel.hidden = true;
+
+  // Load saved times into inputs
+  const saved = loadReminderTimes();
+  if (t1) t1.value = saved[0] || "08:30";
+  if (t2) t2.value = saved[1] || "13:00";
+  if (t3) t3.value = saved[2] || "20:30";
 
   notifyBtn.addEventListener("click", () => {
-    panel.style.display = panel.style.display === "block" ? "none" : "block";
+    panel.hidden = !panel.hidden;
   });
 
   permBtn?.addEventListener("click", async () => {
@@ -270,61 +351,25 @@ function initReminderUI() {
       if (statusEl) statusEl.textContent = "Notifications not supported on this device.";
       return;
     }
-    const result = await Notification.requestPermission();
-    if (statusEl) statusEl.textContent = `Permission: ${result}`;
+    const perm = await Notification.requestPermission();
+    if (statusEl) statusEl.textContent = perm === "granted"
+      ? "Notifications enabled."
+      : "Permission denied.";
   });
-
-  // restore saved times
-  try {
-    const saved = JSON.parse(localStorage.getItem(LS.reminderTimes) || "null");
-    if (saved?.t1 && t1) t1.value = saved.t1;
-    if (saved?.t2 && t2) t2.value = saved.t2;
-    if (saved?.t3 && t3) t3.value = saved.t3;
-  } catch {}
 
   saveBtn?.addEventListener("click", () => {
-    const data = {
-      t1: t1?.value || "",
-      t2: t2?.value || "",
-      t3: t3?.value || "",
-    };
-    localStorage.setItem(LS.reminderTimes, JSON.stringify(data));
-    if (statusEl) statusEl.textContent = "Saved.";
+    const times = [
+      (t1?.value || "08:30").trim(),
+      (t2?.value || "13:00").trim(),
+      (t3?.value || "20:30").trim(),
+    ];
+    saveReminderTimes(times);
+    if (statusEl) statusEl.textContent = `Saved: ${times.join(", ")}`;
   });
+
+  // Start the loop once
+  startReminderLoop();
 }
 
-// ---------- optional copy (won’t break if you delete the button) ----------
-function initCopy() {
-  const copyBtn = document.getElementById("copy");
-  copyBtn?.addEventListener("click", async () => {
-    const text = document.getElementById("quote")?.textContent || "";
-    try {
-      await navigator.clipboard.writeText(text);
-      const sub = document.getElementById("sub");
-      if (sub) sub.textContent = "Copied. Use it.";
-    } catch {
-      const sub = document.getElementById("sub");
-      if (sub) sub.textContent = "Copy failed.";
-    }
-  });
-}
-
-// ---------- init ----------
-let phrases = loadPhrases();
-updateCount(phrases.length);
-setQuote(phrases[pickIndex(phrases.length)]);
-
-document.getElementById("next")?.addEventListener("click", () => {
-  phrases = loadPhrases();
-  updateCount(phrases.length);
-  setQuote(phrases[pickIndex(phrases.length)]);
-});
-
-initHoldTheLineUI();
+// IMPORTANT: call this once on load (after your other init code)
 initReminderUI();
-initCopy();
-
-// ---------- service worker ----------
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js");
-}
