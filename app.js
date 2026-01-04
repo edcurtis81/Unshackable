@@ -160,7 +160,7 @@ function updateCount(n) {
 let phrases = loadPhrases();
 updateCount(phrases.length);
 setQuote(phrases[pickIndex(phrases.length)]);
-
+initHoldTheLine();
 // ---------- buttons ----------
 document.getElementById("next").onclick = () => {
   phrases = loadPhrases();
