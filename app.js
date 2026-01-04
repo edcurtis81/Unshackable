@@ -123,7 +123,19 @@ const LS = {
   last: "unshakable_last",
   reminderTimes: "unshakable_reminder_times"
 };
+// ---------- discipline state ----------
+function initHoldTheLine() {
+  const today = new Date().toDateString();
+  const last = localStorage.getItem("unshakable_hold_date");
 
+  if (last !== today) {
+    localStorage.setItem("unshakable_hold_date", today);
+    localStorage.setItem(
+      "unshakable_hold_message",
+      "Today, I hold the line."
+    );
+  }
+}
 // ---------- phrases ----------
 function loadPhrases() {
   try {
