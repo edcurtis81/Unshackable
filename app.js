@@ -133,26 +133,29 @@ const DEFAULT_PHRASES = [
 ];
 
 // ---------- storage keys ----------
+const SUBLINES = [
+  "Breathe. Shoulders down. Eyes forward.",
+  "Slow is strong.",
+  "Calm is confidence.",
+  "You’re not behind. You’re rebuilding.",
+  "Self-trust beats reassurance.",
+];
+
 const LS = {
   phrases: "unshakable_phrases",
   last: "unshakable_last",
-  holdDate: "unshakable_hold_date",
-  holdStreak: "unshakable_hold_streak",
-  reminderTimes: "unshakable_reminder_times"
+  reminderTimes: "unshakable_reminder_times",
+  line: "unshakable_line_state",
 };
 
-// ---------- helpers ----------
-function $(id) { return document.getElementById(id); }
-
+// ---------- phrases ----------
 function loadPhrases() {
   try {
     const raw = localStorage.getItem(LS.phrases);
-    if (!raw) return DEFAULT_PHRASES.slice();
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) && arr.length ? arr : DEFAULT_PHRASES.slice();
-  } catch {
-    return DEFAULT_PHRASES.slice();
-  }
+    const arr = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(arr) && arr.length) return arr;
+  } catch {}
+  return DEFAULT_PHRASES.slice();
 }
 
 function savePhrases(arr) {
@@ -162,26 +165,38 @@ function savePhrases(arr) {
 function pickIndex(max) {
   const last = Number(localStorage.getItem(LS.last) || -1);
   let idx = Math.floor(Math.random() * max);
-  if (max > 1 && idx === last) idx = (idx + 1) % max;
+  if (idx === last) idx = (idx + 1) % max;
   localStorage.setItem(LS.last, String(idx));
   return idx;
 }
 
 function setQuote(text) {
-  const q = $("quote");
-  const sub = $("sub");
+  const q = document.getElementById("quote");
+  const sub = document.getElementById("sub");
   if (q) q.textContent = text;
   if (sub) sub.textContent = SUBLINES[Math.floor(Math.random() * SUBLINES.length)];
 }
 
 function updateCount(n) {
-  const el = $("count");
-  if (el) el.textContent = `${n} phrases`;
+  const el = document.getElementById("count");
+  if (el) el.textContent = String(n);
 }
 
-// ---------- Hold The Line ----------
+// ---------- hold the line ----------
+function loadLineState() {
+  try {
+    const raw = localStorage.getItem(LS.line);
+    return raw ? JSON.parse(raw) : { lastMarked: "", streak: 0 };
+  } catch {
+    return { lastMarked: "", streak: 0 };
+  }
+}
+
+function saveLineState(state) {
+  localStorage.setItem(LS.line, JSON.stringify(state));
+}
+
 function todayKey() {
-  // local day key (simple)
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -190,181 +205,126 @@ function todayKey() {
 }
 
 function initHoldTheLineUI() {
-  const yesBtn = $("yesBtn");
-  const noBtn = $("noBtn");
-  const status = $("holdStatus");
-  const streakEl = $("streak");
+  const yesBtn = document.getElementById("yes");
+  const noBtn = document.getElementById("no");
+  const status = document.getElementById("lineStatus");
+  const daysEl = document.getElementById("days");
 
-  if (!yesBtn || !noBtn) return;
+  const state = loadLineState();
+  const tk = todayKey();
 
   function render() {
-    const lastDate = localStorage.getItem(LS.holdDate) || "";
-    const streak = Number(localStorage.getItem(LS.holdStreak) || 0);
+    if (daysEl) daysEl.textContent = String(state.streak);
+    if (!status) return;
 
-    if (status) {
-      status.textContent = lastDate === todayKey() ? "Marked today." : "Not marked today.";
-    }
-    if (streakEl) {
-      streakEl.textContent = String(streak);
+    if (state.lastMarked === tk) {
+      status.textContent = "Marked today.";
+    } else {
+      status.textContent = "Not marked today.";
     }
   }
 
-  yesBtn.onclick = () => {
-    const t = todayKey();
-    const lastDate = localStorage.getItem(LS.holdDate) || "";
-    let streak = Number(localStorage.getItem(LS.holdStreak) || 0);
-
-    // Only increment once per day
-    if (lastDate !== t) {
-      streak += 1;
-      localStorage.setItem(LS.holdStreak, String(streak));
-      localStorage.setItem(LS.holdDate, t);
+  yesBtn?.addEventListener("click", () => {
+    if (state.lastMarked !== tk) {
+      state.streak += 1;
+      state.lastMarked = tk;
+      saveLineState(state);
     }
     render();
-  };
+  });
 
-  noBtn.onclick = () => {
-    // No punishment, no shame — just mark the day (optional)
-    localStorage.setItem(LS.holdDate, todayKey());
+  noBtn?.addEventListener("click", () => {
+    // no punishment. no shame. just reality.
+    state.lastMarked = tk;
+    saveLineState(state);
     render();
-  };
+  });
 
   render();
 }
 
-// ---------- reminders (panel + simple in-app notifications) ----------
-function initReminders() {
-  const notifyBtn = $("notify");
-  const panel = $("reminderPanel");
+// ---------- daily reminder (UI toggle + save times) ----------
+function initReminderUI() {
+  const notifyBtn = document.getElementById("notify");
+  const panel = document.getElementById("reminderPanel");
+  const permBtn = document.getElementById("permBtn");
+  const saveBtn = document.getElementById("saveRemindersBtn");
+  const statusEl = document.getElementById("reminderStatus");
 
-  const permBtn = $("permBtn");
-  const saveBtn = $("saveRemindersBtn");
-  const statusEl = $("reminderStatus");
+  const t1 = document.getElementById("t1");
+  const t2 = document.getElementById("t2");
+  const t3 = document.getElementById("t3");
 
-  // toggle panel
-  if (notifyBtn && panel) {
-    notifyBtn.addEventListener("click", () => {
-      panel.style.display = panel.style.display === "block" ? "none" : "block";
-    });
-  }
+  // If you removed the reminder panel from HTML, do nothing.
+  if (!notifyBtn || !panel) return;
 
-  function setStatus(msg) {
-    if (statusEl) statusEl.textContent = msg;
-  }
+  // start hidden (safe)
+  if (!panel.style.display) panel.style.display = "none";
 
-  async function requestPermission() {
+  notifyBtn.addEventListener("click", () => {
+    panel.style.display = panel.style.display === "block" ? "none" : "block";
+  });
+
+  permBtn?.addEventListener("click", async () => {
     if (!("Notification" in window)) {
-      setStatus("Notifications not supported on this device/browser.");
-      return false;
+      if (statusEl) statusEl.textContent = "Notifications not supported on this device.";
+      return;
     }
-    if (Notification.permission === "granted") return true;
-    const res = await Notification.requestPermission();
-    return res === "granted";
-  }
+    const result = await Notification.requestPermission();
+    if (statusEl) statusEl.textContent = `Permission: ${result}`;
+  });
 
-  if (permBtn) {
-    permBtn.addEventListener("click", async () => {
-      try {
-        const ok = await requestPermission();
-        setStatus(ok ? "Notifications enabled." : "Permission not granted.");
-      } catch {
-        setStatus("Could not request permission.");
-      }
-    });
-  }
+  // restore saved times
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS.reminderTimes) || "null");
+    if (saved?.t1 && t1) t1.value = saved.t1;
+    if (saved?.t2 && t2) t2.value = saved.t2;
+    if (saved?.t3 && t3) t3.value = saved.t3;
+  } catch {}
 
-  // Save 3 times and run a lightweight checker while app is open
-  function loadReminderTimes() {
+  saveBtn?.addEventListener("click", () => {
+    const data = {
+      t1: t1?.value || "",
+      t2: t2?.value || "",
+      t3: t3?.value || "",
+    };
+    localStorage.setItem(LS.reminderTimes, JSON.stringify(data));
+    if (statusEl) statusEl.textContent = "Saved.";
+  });
+}
+
+// ---------- optional copy (won’t break if you delete the button) ----------
+function initCopy() {
+  const copyBtn = document.getElementById("copy");
+  copyBtn?.addEventListener("click", async () => {
+    const text = document.getElementById("quote")?.textContent || "";
     try {
-      const raw = localStorage.getItem(LS.reminderTimes);
-      const arr = raw ? JSON.parse(raw) : null;
-      return Array.isArray(arr) ? arr : null;
+      await navigator.clipboard.writeText(text);
+      const sub = document.getElementById("sub");
+      if (sub) sub.textContent = "Copied. Use it.";
     } catch {
-      return null;
+      const sub = document.getElementById("sub");
+      if (sub) sub.textContent = "Copy failed.";
     }
-  }
-
-  function saveReminderTimes(arr) {
-    localStorage.setItem(LS.reminderTimes, JSON.stringify(arr));
-  }
-
-  let lastFired = new Set();
-
-  function startChecker() {
-    setInterval(() => {
-      const times = loadReminderTimes();
-      if (!times || !times.length) return;
-      if (!("Notification" in window)) return;
-      if (Notification.permission !== "granted") return;
-
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, "0");
-      const mm = String(now.getMinutes()).padStart(2, "0");
-      const key = `${todayKey()} ${hh}:${mm}`;
-
-      if (lastFired.has(key)) return;
-
-      const current = `${hh}:${mm}`;
-      if (times.includes(current)) {
-        lastFired.add(key);
-        try {
-          new Notification("Unshakable", { body: "Hold the line. Stay calm. Move clean." });
-        } catch {}
-      }
-    }, 15000); // checks every 15s while app is open
-  }
-
-  startChecker();
-
-  if (saveBtn) {
-    saveBtn.addEventListener("click", async () => {
-      const t1 = $("t1")?.value || "";
-      const t2 = $("t2")?.value || "";
-      const t3 = $("t3")?.value || "";
-
-      const times = [t1, t2, t3].filter(Boolean);
-
-      if (!times.length) {
-        setStatus("Pick at least one time.");
-        return;
-      }
-
-      const ok = await requestPermission();
-      if (!ok) {
-        setStatus("Enable notifications first.");
-        return;
-      }
-
-      saveReminderTimes(times);
-      setStatus(`Saved: ${times.join(", ")}`);
-    });
-  }
+  });
 }
 
 // ---------- init ----------
-(function init() {
-  const phrases = loadPhrases();
+let phrases = loadPhrases();
+updateCount(phrases.length);
+setQuote(phrases[pickIndex(phrases.length)]);
+
+document.getElementById("next")?.addEventListener("click", () => {
+  phrases = loadPhrases();
   updateCount(phrases.length);
   setQuote(phrases[pickIndex(phrases.length)]);
-  initHoldTheLineUI();
-  initReminders();
+});
 
-  // buttons
-  $("next")?.addEventListener("click", () => {
-    const p = loadPhrases();
-    updateCount(p.length);
-    setQuote(p[pickIndex(p.length)]);
-  });
+initHoldTheLineUI();
+initReminderUI();
+initCopy();
 
-  $("copy")?.addEventListener("click", async () => {
-    const text = $("quote")?.textContent || "";
-    try {
-      await navigator.clipboard.writeText(text);
-      if ($("sub")) $("sub").textContent = "Copied. Use it.";
-    } catch {
-      if ($("sub")) $("sub").textContent = "Copy failed.";
-    }
-  });
-
-  // IMPORTANT: "Edit phrases" intentionally disabled for this build.
-})();
+// ---------- service worker ----------
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js");
+}
