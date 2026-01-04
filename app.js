@@ -257,16 +257,7 @@ if (notifyBtn && reminderPanel) {
 }
 
 // ---------- reminders (ONE version only) ----------
-const notifyBtn = document.getElementById("notify");
-const panel = document.getElementById("reminderPanel");
-const permBtn = document.getElementById("permBtn");
-const saveBtn = document.getElementById("saveRemindersBtn");
-const statusEl = document.getElementById("reminderStatus");
 
-notifyBtn?.addEventListener("click", () => {
-  if (!panel) return;
-  panel.style.display = panel.style.display === "block" ? "none" : "block";
-});
 
 async function requestPermission() {
   if (!("Notification" in window)) {
