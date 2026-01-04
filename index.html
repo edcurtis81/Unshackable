@@ -106,6 +106,58 @@
     }
   </style>
 </head>
+    .reminder {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .reminderTop {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .reminderStatus {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      opacity: .75;
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    .reminderTimes {
+      margin-top: 10px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .reminderTimes label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      opacity: .9;
+    }
+
+    .reminderTimes input[type="time"]{
+      background:#121a2f;
+      border:1px solid rgba(255,255,255,.12);
+      color:#e6e8ee;
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+
+    .reminderNote{
+      margin-top: 10px;
+      font-size: 11px;
+      opacity: .6;
+      line-height: 1.35;
+    }
 
 <body>
   <div class="card">
